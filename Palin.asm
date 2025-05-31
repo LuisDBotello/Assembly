@@ -14,8 +14,8 @@
     response          db ?
     
     ;Botello Lopez Luis Daniel
-    ;Garcia Felix Gilberto
-    ;Beltran Camacho Moises
+    ;Lenguajes de Interfaz
+
 
 .code
 PRINT macro msg
