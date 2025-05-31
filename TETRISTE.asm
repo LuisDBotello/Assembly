@@ -1,0 +1,437 @@
+.model SMALL
+.stack 200H
+.data
+
+    TITULO          DB 'TETRIS T$'
+    COL_TITULO      DB 3
+    REN_TITULO      DB 2
+    NOMBRE1         DB 'DANIEL BOT$'
+    COL_N1          DB 3
+    REN_N1          DB 18
+    COL_N2          DB 3
+    REN_N2          DB 19
+    ST_PUNT         DB 'SCORE $'
+    COL_PUNT        DB 3
+    REN_PUNT        DB 4
+    PUNTAJE         DB 0
+
+    COLOR_FONDO     DB 01101110B
+    COLOR_MARCO     DB 01000001B
+    COLOR_CAMPO     DB 01110111B
+    COLOR_FIGURA    DB 01010011B
+    COLOR_FIJO      DB 00000001B 
+
+    COL_INI_FONDO   DB 0
+    REN_INI_FONDO   DB 0
+    COL_FIN_FONDO   DB 79
+    REN_FIN_FONDO   DB 24
+
+    COL_INI_MARCO   DB 19
+    REN_INI_MARCO   DB 0
+    COL_FIN_MARCO   DB 60
+    REN_FIN_MARCO   DB 24
+
+    COL_INI_CAMPO   DB 21
+    REN_INI_CAMPO   DB 0
+    COL_FIN_CAMPO   DB 58
+    REN_FIN_CAMPO   DB 23
+
+    FIGURA_1        DB 0, 0, 1, 1
+    FIGURA_2        DB 0, 0, 3, 0
+    FIGURA_3        DB 0, 0, 0, 3
+                   
+    FIGURA_ACTUAL   DB 1
+    COL_INI_ACT     DB 28
+    REN_INI_ACT     DB 0
+    COL_FIN_ACT     DB 28
+    REN_FIN_ACT     DB 0
+
+    BOOL_FIELD      DB 1610 DUP(0)
+.CODE
+
+SCROLL_UP MACRO COL1, REN1, COL2, REN2, COLOR, NUM_REN
+    PUSH CX
+    MOV AH, 6
+    MOV CL, COL1
+    MOV CH, REN1
+    MOV DL, COL2
+    MOV DH, REN2
+    MOV BH, COLOR
+    MOV AL, NUM_REN
+    INT 10H
+    POP CX
+    ENDM
+
+MAIN PROC
+    MOV AX, @data
+    MOV DS, AX
+
+    CALL DIBUJA_MARCO
+
+    MOV AH, 2
+    MOV DH, REN_TITULO
+    MOV DL, COL_TITULO
+    MOV BH, 0
+    INT 10H
+
+    LEA DX, TITULO
+    MOV AH, 9
+    INT 21H
+
+    MOV AH, 2
+    MOV DH, REN_N1
+    MOV DL, COL_N1
+    MOV BH, 0
+    INT 10H
+
+    LEA DX, NOMBRE1
+    MOV AH, 9
+    INT 21H
+
+    MOV AH, 2
+    MOV DH, REN_N2
+    MOV DL, COL_N2
+    MOV BH, 0
+    INT 10H
+
+
+    MOV AH, 2
+    MOV DH, REN_PUNT
+    MOV DL, COL_PUNT
+    MOV BH, 0
+    INT 10H
+
+    LEA DX, ST_PUNT
+    MOV AH, 9
+    INT 21H
+
+    PUSH CX
+    PUSH SI
+    PUSH BX
+    PUSH DI
+    MOV SI, 23               
+    MOV CX, 70               
+
+INICIALIZA_ULTIMA_FILA:
+    MOV AX, SI           
+    MOV BX, 70           
+    MUL BX               
+    ADD AX, CX           
+    MOV DI, AX           
+
+    MOV BYTE PTR [BOOL_FIELD + DI], 1 
+
+    DEC CX               
+    JNZ INICIALIZA_ULTIMA_FILA 
+    POP DI
+    POP BX    
+    POP SI
+    POP CX
+    CALL MUESTRA_PUNTAJE
+
+JUEGO:
+    CALL ACTUALIZA_PUNTAJE
+    CALL GENERA_ALE
+    CMP AL, 53
+    JLE FIG_1
+    CMP AL, 106
+    JLE FIG_2
+    JMP FIG_3
+
+FIG_1:
+    MOV FIGURA_ACTUAL, 1
+    MOV AL, COL_FIN_MARCO
+    ADD AL, COL_INI_MARCO
+    SHR AL, 1             
+    MOV [COL_INI_ACT], AL
+    MOV [COL_FIN_ACT], AL
+    INC [COL_FIN_ACT]    
+    MOV AL, [REN_INI_MARCO]
+    MOV [REN_INI_ACT], AL
+    MOV [REN_FIN_ACT], AL
+    INC [REN_FIN_ACT]    
+    
+    CALL MUESTRA_PUNTAJE
+    JMP CICLO_JUEGO
+
+FIG_2:
+    MOV FIGURA_ACTUAL, 2
+    MOV AL, COL_FIN_MARCO
+    ADD AL, COL_INI_MARCO
+    SHR AL, 1
+    MOV [COL_INI_ACT], AL
+    MOV [COL_FIN_ACT], AL
+    ADD [COL_FIN_ACT], 3 
+    MOV AL, [REN_INI_MARCO]
+    MOV [REN_INI_ACT], AL
+    MOV [REN_FIN_ACT], AL
+    
+    CALL MUESTRA_PUNTAJE
+    JMP CICLO_JUEGO
+
+FIG_3:
+    MOV FIGURA_ACTUAL, 3
+    MOV AL, COL_FIN_MARCO
+    ADD AL, COL_INI_MARCO
+    SHR AL, 1
+    MOV [COL_INI_ACT], AL
+    MOV [COL_FIN_ACT], AL
+    MOV AL, [REN_INI_MARCO]
+    MOV [REN_INI_ACT], AL
+    MOV [REN_FIN_ACT], AL
+    ADD [REN_FIN_ACT], 3
+    
+    CALL MUESTRA_PUNTAJE
+    JMP CICLO_JUEGO
+
+CICLO_JUEGO:
+    CALL CHECAR_TECLA
+    CALL DIBUJA_FIGURA
+    CALL RETARDO
+    CALL BORRA_FIGURA
+    CALL BAJA_FIGURA
+    
+    JMP CICLO_JUEGO
+
+MUEVE_IZQ PROC
+    MOV AL, [COL_INI_ACT]
+    CMP AL, COL_INI_CAMPO
+    JLE FIN_IZQ          
+    DEC [COL_INI_ACT]  
+    DEC [COL_INI_ACT]   
+    DEC [COL_FIN_ACT]
+    DEC [COL_FIN_ACT]    
+FIN_IZQ:
+    RET
+MUEVE_IZQ ENDP
+
+MUEVE_DER PROC
+    
+    MOV AL, [COL_FIN_ACT]
+    CMP AL, COL_FIN_CAMPO
+    JGE FIN_DER          
+    INC [COL_INI_ACT]
+    INC [COL_INI_ACT]    
+    INC [COL_FIN_ACT]
+    INC [COL_FIN_ACT]    
+FIN_DER:
+    RET
+MUEVE_DER ENDP
+
+
+
+DIBUJA_MARCO PROC
+    SCROLL_UP COL_INI_FONDO, REN_INI_FONDO, COL_FIN_FONDO, REN_FIN_FONDO, COLOR_FONDO, 0
+    SCROLL_UP COL_INI_MARCO, REN_INI_MARCO, COL_FIN_MARCO, REN_FIN_MARCO, COLOR_MARCO, 0
+    SCROLL_UP COL_INI_CAMPO, REN_INI_CAMPO, COL_FIN_CAMPO, REN_FIN_CAMPO, COLOR_CAMPO, 0
+    RET
+DIBUJA_MARCO ENDP
+
+GENERA_ALE PROC
+    MOV AH, 02CH
+    INT 21H
+    ADD AL, DH
+    ADD AL, DL
+    RET
+GENERA_ALE ENDP
+
+RETARDO PROC
+    PUSH CX
+    MOV CX, 0FFFFH
+RETARDO_LOOP:
+    NOP
+    NOP
+    NOP
+    NOP
+    LOOP RETARDO_LOOP
+    POP CX
+    RET
+RETARDO ENDP
+
+BAJA_FIGURA PROC
+    
+    CALL COMPROBAR_CAMPO
+
+CONTINUA_BAJA:
+    INC [REN_INI_ACT]    
+    INC [REN_FIN_ACT]    
+    RET
+BAJA_FIGURA ENDP
+
+COMPROBAR_CAMPO PROC
+    PUSH AX
+    PUSH BX
+    PUSH CX
+    PUSH DX
+    PUSH SI
+    
+    MOV AL, REN_FIN_ACT   
+    MOV BL, 70             
+    MUL BL                 
+    ADD AL, COL_INI_ACT    
+
+    
+    MOV SI, OFFSET BOOL_FIELD
+    ADD SI, AX
+    MOV DL, [SI]      
+    CMP DL, 1              
+    JE CAMPO_OCUPADO       
+
+    JMP FIN_COMPROBAR       
+    
+CAMPO_OCUPADO:
+    CALL ACTUALIZA_CAMPO
+    CALL FIJA_FIGURA
+    JMP JUEGO
+FIN_COMPROBAR:
+    POP SI
+    POP DX
+    POP CX
+    POP BX
+    POP AX
+    RET
+COMPROBAR_CAMPO ENDP
+;EL ALGORITMO SEGUIDO EN ACTUALIZA_CAMPO HACER UNA MATRIZ DE BOOLEANOS CUADRADA CON LAS
+;COORDENADAS DONDE LA FIGURA CAY?, MARCANDOLO COMO VERDADERO. ESTO PERMITE QUE PODAMOS
+;COMPROBAR SI EL CAMPO DONDE VA A CAER LA FIGURA EST? OCUPADO Y DETENER EL AVANCE Y FIJARLA
+;GENERANDO EL EFECTO DE APILAMIENTO
+ACTUALIZA_CAMPO PROC
+    ;1
+   MOV AL, [REN_INI_ACT]      ;REN INI
+    DEC AL
+    MOV BL, 70              
+    MUL BL                   
+
+    ADD AL, [COL_INI_ACT]      ;COL INI
+    MOV SI, AX
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1      
+    ;2
+    MOV AL, [REN_INI_ACT]       ;REN INI  
+    DEC AL                   ;DEC
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT]
+    DEC AL       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1 
+    ;3     
+    MOV AL, [REN_FIN_ACT]      ;REN INI
+    MOV BL, 70              
+    MUL BL                   
+
+    ADD AL, [COL_INI_ACT]      ;COL INI
+    MOV SI, AX
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1 
+    ;4
+    MOV AL, [REN_FIN_ACT]      ;REN INI
+    INC AL
+    MOV BL, 70              
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT] 
+    INC AL     ;COL INI
+    MOV SI, AX
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1   
+    ;4
+    MOV AL, [REN_FIN_ACT]  
+    INC AL     ;REN INI  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT]       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1 
+    ;4
+    MOV AL, [REN_FIN_ACT]       ;REN INI
+    DEC AL  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT]       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1 
+     
+    RET
+
+    RET
+ACTUALIZA_CAMPO ENDP
+
+
+
+FIJA_FIGURA PROC
+    SCROLL_UP [COL_INI_ACT], [REN_INI_ACT], [COL_FIN_ACT], [REN_FIN_ACT], COLOR_FIJO, 0
+    RET
+FIJA_FIGURA ENDP
+
+BORRA_FIGURA PROC
+    SCROLL_UP [COL_INI_ACT], [REN_INI_ACT], [COL_FIN_ACT], [REN_FIN_ACT], COLOR_CAMPO, 0
+    RET
+BORRA_FIGURA ENDP
+
+
+DIBUJA_FIGURA PROC
+    SCROLL_UP [COL_INI_ACT], [REN_INI_ACT], [COL_FIN_ACT], [REN_FIN_ACT], COLOR_FIGURA, 0
+    RET
+DIBUJA_FIGURA ENDP
+
+CHECAR_TECLA PROC
+    MOV AH, 1
+    INT 16H
+    JZ SALIR_TECLA
+    MOV AH, 0
+    INT 16H
+    CMP AH, 4BH
+    JE PROCESAR_IZQ
+    CMP AH, 4DH
+    JE PROCESAR_DER
+SALIR_TECLA:
+    RET
+PROCESAR_IZQ:
+    CALL MUEVE_IZQ
+    JMP SALIR_TECLA
+PROCESAR_DER:
+    CALL MUEVE_DER
+    JMP SALIR_TECLA
+CHECAR_TECLA ENDP
+MUESTRA_PUNTAJE PROC
+    MOV AH, 02H        
+    MOV BH, 0          
+    MOV DL, 10         
+    MOV DH, 5          
+    INT 10H            
+
+    MOV DL, ' '        
+    MOV AH, 02H        
+    INT 21H            
+
+    MOV AL, PUNTAJE    
+    ADD AL, '0'        
+    MOV DL, AL         
+    MOV AH, 02H        
+    INT 21H            
+
+    RET
+MUESTRA_PUNTAJE ENDP
+
+ACTUALIZA_PUNTAJE PROC
+    
+    MOV AL, PUNTAJE      
+    INC AL               
+    MOV PUNTAJE, AL      
+
+    RET
+ACTUALIZA_PUNTAJE ENDP
+END MAIN
