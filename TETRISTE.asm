@@ -16,7 +16,7 @@
     PUNTAJE         DB 0
 
     COLOR_FONDO     DB 01101110B
-    COLOR_MARCO     DB 01000001B
+    COLOR_MARCO     DB 01000101B
     COLOR_CAMPO     DB 01110111B
     COLOR_FIGURA    DB 01010011B
     COLOR_FIJO      DB 00000001B 
@@ -36,10 +36,6 @@
     COL_FIN_CAMPO   DB 58
     REN_FIN_CAMPO   DB 23
 
-    FIGURA_1        DB 0, 0, 1, 1
-    FIGURA_2        DB 0, 0, 3, 0
-    FIGURA_3        DB 0, 0, 0, 3
-                   
     FIGURA_ACTUAL   DB 1
     COL_INI_ACT     DB 28
     REN_INI_ACT     DB 0
@@ -176,6 +172,7 @@ FIG_3:
     SHR AL, 1
     MOV [COL_INI_ACT], AL
     MOV [COL_FIN_ACT], AL
+    INC [COL_FIN_ACT]
     MOV AL, [REN_INI_MARCO]
     MOV [REN_INI_ACT], AL
     MOV [REN_FIN_ACT], AL
@@ -269,13 +266,25 @@ COMPROBAR_CAMPO PROC
     MOV BL, 70             
     MUL BL                 
     ADD AL, COL_INI_ACT    
-
     
     MOV SI, OFFSET BOOL_FIELD
     ADD SI, AX
     MOV DL, [SI]      
     CMP DL, 1              
     JE CAMPO_OCUPADO       
+
+    MOV AL, REN_FIN_ACT   
+    MOV BL, 70             
+    MUL BL                 
+    ADD AL, COL_FIN_ACT   
+    DEC AL 
+    
+    MOV SI, OFFSET BOOL_FIELD
+    ADD SI, AX
+    MOV DL, [SI]      
+    CMP DL, 1              
+    JE CAMPO_OCUPADO 
+
 
     JMP FIN_COMPROBAR       
     
@@ -297,7 +306,7 @@ COMPROBAR_CAMPO ENDP
 ;GENERANDO EL EFECTO DE APILAMIENTO
 ACTUALIZA_CAMPO PROC
     ;1
-   MOV AL, [REN_INI_ACT]      ;REN INI
+    MOV AL, [REN_INI_ACT]      ;REN INI
     DEC AL
     MOV BL, 70              
     MUL BL                   
@@ -309,12 +318,10 @@ ACTUALIZA_CAMPO PROC
     MOV BYTE PTR [BX], 1      
     ;2
     MOV AL, [REN_INI_ACT]       ;REN INI  
-    DEC AL                   ;DEC
     MOV BL, 70               
     MUL BL                   
 
     ADD AL, [COL_FIN_ACT]
-    DEC AL       ;COL INI
     MOV SI, AX               
     MOV BX, OFFSET BOOL_FIELD 
     ADD BX, SI                
@@ -325,24 +332,13 @@ ACTUALIZA_CAMPO PROC
     MUL BL                   
 
     ADD AL, [COL_INI_ACT]      ;COL INI
+    INC AL
     MOV SI, AX
     MOV BX, OFFSET BOOL_FIELD 
     ADD BX, SI                
     MOV BYTE PTR [BX], 1 
     ;4
-    MOV AL, [REN_FIN_ACT]      ;REN INI
-    INC AL
-    MOV BL, 70              
-    MUL BL                   
-
-    ADD AL, [COL_FIN_ACT] 
-    INC AL     ;COL INI
-    MOV SI, AX
-    MOV BX, OFFSET BOOL_FIELD 
-    ADD BX, SI                
-    MOV BYTE PTR [BX], 1   
-    ;4
-    MOV AL, [REN_FIN_ACT]  
+    MOV AL, [REN_INI_ACT]  
     INC AL     ;REN INI  
     MOV BL, 70               
     MUL BL                   
@@ -352,7 +348,56 @@ ACTUALIZA_CAMPO PROC
     MOV BX, OFFSET BOOL_FIELD 
     ADD BX, SI                
     MOV BYTE PTR [BX], 1 
-    ;4
+    ;5
+    MOV AL, [REN_INI_ACT]       ;REN INI
+    DEC AL  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT]       ;COL INI
+    DEC AL
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1
+    ;NOS ASEGURAMOS QUE LA FIGURA SEA MAS ALTA QUE 1
+    MOV AL, [REN_INI_ACT]
+    CMP AL, [REN_FIN_ACT]
+    JE FIN
+    ;6
+    MOV AL, [REN_FIN_ACT]       ;REN INI
+    DEC AL  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_INI_ACT]       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1
+    ;7
+    MOV AL, [REN_INI_ACT]       ;REN INI
+    INC AL  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_INI_ACT]       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1
+    ;8
+    MOV AL, [REN_INI_ACT]       ;REN INI
+    INC AL  
+    MOV BL, 70               
+    MUL BL                   
+
+    ADD AL, [COL_FIN_ACT]       ;COL INI
+    MOV SI, AX               
+    MOV BX, OFFSET BOOL_FIELD 
+    ADD BX, SI                
+    MOV BYTE PTR [BX], 1
+    ;9
     MOV AL, [REN_FIN_ACT]       ;REN INI
     DEC AL  
     MOV BL, 70               
@@ -362,11 +407,10 @@ ACTUALIZA_CAMPO PROC
     MOV SI, AX               
     MOV BX, OFFSET BOOL_FIELD 
     ADD BX, SI                
-    MOV BYTE PTR [BX], 1 
-     
+    MOV BYTE PTR [BX], 1
+FIN:
     RET
 
-    RET
 ACTUALIZA_CAMPO ENDP
 
 
